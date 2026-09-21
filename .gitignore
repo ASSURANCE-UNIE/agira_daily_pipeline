@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.pytest_tmp/
+.test_tmp/
+.coverage
+/agira/
+data/history/questions/*/
+data/history/terminations/*/
+data/depot/questions/*.TXT
+data/depot/terminations/*.TXT
+!.gitkeep
+prd.env

@@ -1,0 +1,22 @@
+[agira]
+environment = "production"
+account_code = "AC000189"
+country_code = "250"
+company_code = "0703"
+internal_company_code = "ASUNI"
+question_sequence = 1
+termination_sequence = 2
+
+[schedule]
+timezone = "Europe/Paris"
+question_lag_days = 1
+termination_lag_days = 35
+
+[database]
+connection_string_env = "AGIRA_DB_CONNECTION_STRING"
+
+[paths]
+question_query = "queries/questions/query.sql"
+termination_query = "queries/terminations/query.sql"
+history = "data/history"
+depot = "data/depot"
