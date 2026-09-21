@@ -51,8 +51,9 @@ SELECT
                         WHEN assure.est_personne_morale IS TRUE THEN NULL
                         ELSE assure.date_naissance::date
                     END,
+                -- AGIRA fixed width: 32 per address line.
                 'address_lines', ARRAY(
-                    SELECT TRIM(address_line)
+                    SELECT LEFT(TRIM(address_line), 32)
                     FROM unnest(
                         ARRAY[
                             assure_adr.ligne1,
