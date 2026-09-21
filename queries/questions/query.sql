@@ -3,8 +3,9 @@
 SELECT
     con.idcontrat,
     con.numero_police,
-    per.nom,
-    per.prenom,
+    -- AGIRA fixed widths: name 20, first name 12.
+    LEFT(TRIM(per.nom), 20) AS nom,
+    LEFT(TRIM(per.prenom), 12) AS prenom,
     per.date_naissance,
     ap.code_postal,
     per.permis_date_obtention,

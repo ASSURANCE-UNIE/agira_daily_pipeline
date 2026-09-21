@@ -13,7 +13,7 @@ question_lag_days = 1
 termination_lag_days = 35
 
 [database]
-connection_string_env = "TABLES_BUSINESS_DATABASE_URL"
+connection_string_env = "AGIRA_DB_CONNECTION_STRING"
 
 [paths]
 question_query = "queries/questions/query.sql"

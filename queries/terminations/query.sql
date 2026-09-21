@@ -39,11 +39,12 @@ SELECT
                         WHEN assure.est_personne_morale IS TRUE THEN 'legal_entity'
                         ELSE 'natural_person'
                     END,
-                'name_or_company_name', assure.nom,
+                -- AGIRA fixed widths: name 20, first name 12.
+                'name_or_company_name', LEFT(TRIM(assure.nom), 20),
                 'first_name',
                     CASE
                         WHEN assure.est_personne_morale IS TRUE THEN NULL
-                        ELSE assure.prenom
+                        ELSE LEFT(TRIM(assure.prenom), 12)
                     END,
                 'birth_date',
                     CASE
@@ -184,8 +185,12 @@ WHERE avt_dernier.date_fin::date = :target_date
   AND rd.statut_demande = 'V'
   AND rd.est_valide_controle IS TRUE
   AND avt_dernier.idavenant_fin IS NOT NULL
-  -- AGIRA requires a birth date for natural persons; an incomplete person
-  -- record must not abort the whole day's file.
+  -- AGIRA requires a birth date for natural persons and at least one address
+  -- line; an incomplete person record must not abort the whole day's file.
   AND (assure.est_personne_morale IS TRUE OR assure.date_naissance IS NOT NULL)
+  AND COALESCE(
+        NULLIF(TRIM(assure_adr.ligne1), ''), NULLIF(TRIM(assure_adr.ligne2), ''),
+        NULLIF(TRIM(assure_adr.ligne3), ''), NULLIF(TRIM(assure_adr.rue), '')
+      ) IS NOT NULL
 ORDER BY rd.date_saisie DESC
 LIMIT 100000;
