@@ -39,10 +39,10 @@ an invalid empty TXT file.
 1. Keep the translator in the nested `agira/` repository. The local dependency
    in `pyproject.toml` points there directly.
 2. Run `uv sync --extra database`.
-3. Copy each `query.sql.example` to `query.sql` in `queries/questions` and
-   `queries/terminations`, then replace the placeholder SQL.
-4. Put the ODBC connection string in `AGIRA_DB_CONNECTION_STRING`.
-5. Run `uv run agira-daily all` from this directory.
+3. Put the PostgreSQL URL in `prd.env` as `TABLES_BUSINESS_DATABASE_URL=postgresql://...`
+   (or export it as an environment variable; the variable wins). `prd.env` is
+   gitignored.
+4. Run `uv run agira-daily all` from this directory.
 
 Examples:
 

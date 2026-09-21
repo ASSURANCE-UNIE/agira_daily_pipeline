@@ -51,7 +51,7 @@ SELECT
                         ELSE assure.date_naissance::date
                     END,
                 'address_lines', ARRAY(
-                    SELECT address_line
+                    SELECT TRIM(address_line)
                     FROM unnest(
                         ARRAY[
                             assure_adr.ligne1,
@@ -60,14 +60,17 @@ SELECT
                             assure_adr.rue
                         ]
                     ) AS address_line
-                    WHERE address_line IS NOT NULL
+                    WHERE NULLIF(TRIM(address_line), '') IS NOT NULL
                 ),
                 'postal_code', assure_adr.code_postal,
-                'city', assure_adr.ville,
+                'city', LEFT(TRIM(assure_adr.ville), 26),
+                -- AGIRA width is 12; longer legacy/NEPH-prefixed numbers are
+                -- omitted rather than truncated into a wrong identifier.
                 'driving_licence_number',
                     CASE
                         WHEN assure.est_personne_morale IS TRUE THEN NULL
-                        ELSE assure.permis_numero
+                        WHEN LENGTH(TRIM(assure.permis_numero)) > 12 THEN NULL
+                        ELSE TRIM(assure.permis_numero)
                     END,
                 'driving_licence_date',
                     CASE
@@ -101,8 +104,7 @@ SELECT
                 WHERE hi.idrisque_auto = ra.idrisque_auto
                 ORDER BY hi.date_saisie DESC
                 LIMIT 1
-            ),
-            'serial_number', ra.numero_serie
+            )
         )
     ) AS record_json
 FROM resiliation_demande rd
@@ -182,5 +184,8 @@ WHERE avt_dernier.date_fin::date = :target_date
   AND rd.statut_demande = 'V'
   AND rd.est_valide_controle IS TRUE
   AND avt_dernier.idavenant_fin IS NOT NULL
+  -- AGIRA requires a birth date for natural persons; an incomplete person
+  -- record must not abort the whole day's file.
+  AND (assure.est_personne_morale IS TRUE OR assure.date_naissance IS NOT NULL)
 ORDER BY rd.date_saisie DESC
 LIMIT 100000;

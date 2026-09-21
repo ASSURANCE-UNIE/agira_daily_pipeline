@@ -7,10 +7,10 @@ from agira_daily.db import parameterize_query
 
 def test_target_date_is_bound_not_interpolated() -> None:
     sql, parameters = parameterize_query(
-        "SELECT * FROM t WHERE d=:target_date OR amended=:target_date",
+        "SELECT * FROM t WHERE d=:target_date OR amended=:target_date AND c LIKE 'RC%'",
         date(2026, 9, 17),
     )
-    assert sql == "SELECT * FROM t WHERE d=? OR amended=?"
+    assert sql == "SELECT * FROM t WHERE d=%s OR amended=%s AND c LIKE 'RC%%'"
     assert parameters == (date(2026, 9, 17), date(2026, 9, 17))
 
 

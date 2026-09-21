@@ -6,10 +6,11 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "agira-ra-translator>=0.2,<1",
+    "tzdata>=2024.1",
 ]
 
 [project.optional-dependencies]
-database = ["pyodbc>=5,<6"]
+database = ["psycopg[binary]>=3.2,<4"]
 
 [project.scripts]
 agira-daily = "agira_daily.cli:main"

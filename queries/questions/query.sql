@@ -13,7 +13,11 @@ SELECT
         ra.immatriculation
     ) AS immatriculation,
     per.est_personne_morale,
-    per.pmorale_rcs AS siren
+    -- AGIRA wants a 9-digit SIREN; pmorale_rcs sometimes holds a 14-digit
+    -- SIRET (SIREN is its first 9 digits) or free text, which is dropped.
+    CASE
+        WHEN per.pmorale_rcs ~ '^\d{9}(\d{5})?$' THEN LEFT(per.pmorale_rcs, 9)
+    END AS siren
 FROM contrat con
 JOIN personne per
     ON per.idpersonne = con.idpersonne
