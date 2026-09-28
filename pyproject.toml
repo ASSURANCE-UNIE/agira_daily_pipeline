@@ -11,9 +11,19 @@ dependencies = [
 
 [project.optional-dependencies]
 database = ["psycopg[binary]>=3.2,<4"]
+orchestration = [
+    "dagster>=1.13.24,<1.14",
+    "dagster-dg-cli>=1.13.24,<1.14",
+    "dagster-webserver>=1.13.24,<1.14",
+]
+sftp = [
+    "paramiko>=3.4,<5",
+]
 
 [project.scripts]
 agira-daily = "agira_daily.cli:main"
+agira-inbound = "agira_daily.inbound_cli:main"
+agira-sftp = "agira_daily.sftp:main"
 
 [dependency-groups]
 dev = ["pytest>=8.3,<9"]
@@ -24,6 +34,14 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/agira_daily"]
+
+[tool.dg]
+directory_type = "project"
+
+[tool.dg.project]
+root_module = "agira_daily"
+code_location_target_module = "agira_daily.definitions"
+code_location_name = "agira_daily_pipeline"
 
 [tool.uv.sources]
 agira-ra-translator = { path = "agira", editable = true }

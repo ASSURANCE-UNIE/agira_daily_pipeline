@@ -5,10 +5,19 @@ __pycache__/
 .pytest_tmp/
 .test_tmp/
 .coverage
+.dagster/
 /agira/
 data/history/questions/*/
 data/history/terminations/*/
+data/history/interrogations/rej/*
+data/history/interrogations/resp/*
 data/depot/questions/*.TXT
 data/depot/terminations/*.TXT
+data/depot/interrogations/rej/*
+data/depot/interrogations/resp/*
 !.gitkeep
 prd.env
+
+# SFTP private keys
+*.ppk
+id_rsa_darva

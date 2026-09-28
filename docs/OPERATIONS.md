@@ -2,10 +2,15 @@
 
 ## Recommended schedule
 
-Run once per day after the source system's close of business. With the default
-question lag of one day, a morning run is also safe. Use a scheduler service
-account with read-only database access and write access limited to this project's
-`data` directory.
+The Dagster schedules run every calendar day at 11:00 in `Europe/Paris`. With
+the default question lag of one day, this morning run is safe. Use a scheduler
+service account with read-only database access and write access limited to this
+project's `data` and persistent Dagster state directories.
+
+`agira_outbound_1100` publishes question and termination files to the local
+depots; the downstream FTP/CFT service remains responsible for network transfer.
+`agira_inbound_1100` archives and translates received files, then removes only
+the depot inputs whose history artifacts were verified successfully.
 
 The job returns exit code `0` on a published or explicitly empty feed and `2` on
 configuration, extraction, validation, or publication failure. Capture stdout,

@@ -20,3 +20,12 @@ question_query = "queries/questions/query.sql"
 termination_query = "queries/terminations/query.sql"
 history = "data/history"
 depot = "data/depot"
+
+[sftp]
+host = "edi-sftp.darva.com"
+port = 6322
+username = "AC000189"
+# OpenSSH-format export of id_rsa_winscp.ppk (PuTTYgen > Conversions > Export OpenSSH key).
+private_key = "id_rsa_darva"
+passphrase_env = "passphrase_for_ftp"
+host_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCeaEPSYefWvm4rGKecwWVvujYmznXq0dhIw+B1eGL+esOG8NkhV8xI3U878jXAzg0qR6kxshyh6CZIRN6GimG3KNRkMW+7EV9xv2c9mDMuJqvnPqnbAJ2VCSypIBQtf6bfQOhKaIf5i9wrbY+EAl+Z7iXz2ut7oa6ULsn5ffz5ezBsm+9Eo+M9xboFT6tiM0RUu3ndU1dcs2dySWEzriVqonhKznB4BhRzIk7LxeGVy+00uKCTxTEQT2lTiyfiZf/OAmOHHJJezlmKir3Z5I8CSOTDdRqTuwY0TJHGBE5WfRgOmBIoBRfSLbpNZH+8EM3jyimNM33nr8udokKerAAp"
