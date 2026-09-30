@@ -80,7 +80,11 @@ def push(sftp: Any, *, depot: Path, history: Path) -> list[str]:
 
 
 def pull(sftp: Any, *, depot: Path, history: Path) -> list[str]:
-    """Download every file at the server root into the inbound depot folders."""
+    """Download every file at the server root into the inbound depot folders.
+
+    The server deletes each file itself once it has been downloaded, and
+    refuses client deletes, so pull never removes anything remotely.
+    """
 
     received: list[str] = []
     for entry in sorted(sftp.listdir_attr("."), key=lambda item: item.filename):
@@ -95,10 +99,6 @@ def pull(sftp: Any, *, depot: Path, history: Path) -> list[str]:
         partial = target.with_name(f".{name}.part")  # dotfiles are ignored by agira-inbound
         sftp.get(name, str(partial))
         partial.replace(target)
-        try:
-            sftp.remove(name)
-        except FileNotFoundError:
-            pass  # the server already deleted it on download
         received.append(name)
     return received
 

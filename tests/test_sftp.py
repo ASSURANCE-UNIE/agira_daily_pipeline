@@ -8,7 +8,8 @@ from agira_daily.sftp import pull, push
 
 
 class FakeDarva:
-    """Server root that consumes uploads and deletes files once downloaded."""
+    """Server root that consumes uploads, deletes files once downloaded and
+    refuses client deletes."""
 
     def __init__(self, files: dict[str, bytes]) -> None:
         self.files = dict(files)
@@ -28,9 +29,7 @@ class FakeDarva:
         Path(local).write_bytes(self.files.pop(name))
 
     def remove(self, name):
-        if name not in self.files:
-            raise FileNotFoundError(name)
-        del self.files[name]
+        raise PermissionError(13, "Permission denied")
 
 
 def _write(path: Path, payload: bytes) -> Path:
