@@ -1,5 +1,7 @@
 [server]
-headless = false
+headless = true
+port = 1508
+address = "0.0.0.0"
 
 [browser]
 gatherUsageStats = false

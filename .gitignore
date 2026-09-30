@@ -13,3 +13,5 @@ prd.env
 # SFTP private keys
 *.ppk
 id_rsa_darva
+/.python/
+/.venv.old/

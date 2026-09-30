@@ -19,6 +19,7 @@ orchestration = [
 sftp = [
     "paramiko>=3.4,<5",
 ]
+viewer = ["streamlit>=1.50,<2"]
 
 [project.scripts]
 agira-daily = "agira_daily.cli:main"
@@ -42,6 +43,11 @@ directory_type = "project"
 root_module = "agira_daily"
 code_location_target_module = "agira_daily.definitions"
 code_location_name = "agira_daily_pipeline"
+
+[tool.uv]
+# The Dagster service account cannot read the uv cache in a user profile, and
+# hardlinked files keep the cache's permissions; copies inherit the project's.
+link-mode = "copy"
 
 [tool.uv.sources]
 agira-ra-translator = { path = "agira", editable = true }
