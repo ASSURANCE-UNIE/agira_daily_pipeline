@@ -113,7 +113,9 @@ def send_depot_files(
     return sent
 
 
-@dg.op
+# "after_send" orders the pull behind the push in agira_daily_job; the
+# standalone inbound job leaves it unconnected.
+@dg.op(ins={"after_send": dg.In(dg.Nothing)})
 def receive_results(context: OpExecutionContext) -> list[str]:
     config = _load_config()
     with _sftp_session() as sftp:
@@ -182,32 +184,35 @@ def agira_inbound_job() -> None:
     archive_inbound_results(receive_results())
 
 
+@dg.job(
+    description=(
+        "All in one: generate questions and terminations, send them to DARVA, "
+        "fetch DARVA results into the depot, then archive them into history."
+    )
+)
+def agira_daily_job() -> None:
+    run_date = processing_date()
+    sent = send_depot_files(publish_questions(run_date), publish_terminations(run_date))
+    archive_inbound_results(receive_results(after_send=sent))
+
+
 SCHEDULE_TIMEZONE = _load_config().timezone
 
-agira_outbound_1100 = dg.ScheduleDefinition(
-    name="agira_outbound_1100",
-    job=agira_outbound_job,
+# One schedule for the all-in-one job; the outbound and inbound jobs stay
+# available for manual reruns of a single half.
+agira_daily_1100 = dg.ScheduleDefinition(
+    name="agira_daily_1100",
+    job=agira_daily_job,
     cron_schedule=SCHEDULE_CRON,
     execution_timezone=SCHEDULE_TIMEZONE,
     default_status=dg.DefaultScheduleStatus.RUNNING,
     description=(
-        "At 11:00 local time, build question and termination files in the depots."
-    ),
-)
-
-agira_inbound_1100 = dg.ScheduleDefinition(
-    name="agira_inbound_1100",
-    job=agira_inbound_job,
-    cron_schedule=SCHEDULE_CRON,
-    execution_timezone=SCHEDULE_TIMEZONE,
-    default_status=dg.DefaultScheduleStatus.RUNNING,
-    description=(
-        "At 11:00 local time, translate received files, archive them, and clear "
-        "successfully processed depot inputs."
+        "At 11:00 local time, publish and send questions and terminations, then "
+        "fetch, translate, and archive DARVA results."
     ),
 )
 
 defs = dg.Definitions(
-    jobs=[agira_outbound_job, agira_inbound_job],
-    schedules=[agira_outbound_1100, agira_inbound_1100],
+    jobs=[agira_daily_job, agira_outbound_job, agira_inbound_job],
+    schedules=[agira_daily_1100],
 )

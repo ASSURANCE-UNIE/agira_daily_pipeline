@@ -22,19 +22,60 @@ def _fake_sftp(monkeypatch) -> None:
     monkeypatch.setattr(definitions, "_sftp_session", session)
 
 
-def test_dagster_schedules_run_daily_at_1100_paris() -> None:
-    schedules = {
-        definitions.agira_outbound_1100,
-        definitions.agira_inbound_1100,
-    }
+def test_all_in_one_job_is_the_only_schedule_at_1100_paris() -> None:
+    schedule = definitions.agira_daily_1100
 
-    assert {schedule.cron_schedule for schedule in schedules} == {"0 11 * * *"}
-    assert {schedule.execution_timezone for schedule in schedules} == {
-        "Europe/Paris"
-    }
-    assert {schedule.default_status for schedule in schedules} == {
-        DefaultScheduleStatus.RUNNING
-    }
+    assert schedule.job is definitions.agira_daily_job
+    assert schedule.cron_schedule == "0 11 * * *"
+    assert schedule.execution_timezone == "Europe/Paris"
+    assert schedule.default_status == DefaultScheduleStatus.RUNNING
+    assert [s.name for s in definitions.defs.schedules] == ["agira_daily_1100"]
+
+
+def test_all_in_one_job_pushes_before_pulling_then_archives(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config = SimpleNamespace(
+        timezone="Europe/Paris",
+        depot=tmp_path / "data/depot",
+        history=tmp_path / "data/history",
+    )
+    order: list[str] = []
+
+    def fake_run_feed(feed, *, config, run_date):
+        order.append(f"publish:{feed}")
+        return Publication(
+            feed=feed,
+            run_date=run_date,
+            source_date=run_date,
+            history_dir=config.history / feed / run_date.isoformat(),
+            json_path=None,
+            txt_path=None,
+            depot_path=None,
+            status="empty",
+        )
+
+    def fake_push(sftp, *, depot, history):
+        order.append("push")
+        return ["Q.TXT"]
+
+    def fake_pull(sftp, *, depot, history):
+        order.append("pull")
+        return []
+
+    monkeypatch.setattr(definitions, "_load_config", lambda: config)
+    monkeypatch.setattr(definitions, "run_feed", fake_run_feed)
+    monkeypatch.setattr(definitions, "push", fake_push)
+    monkeypatch.setattr(definitions, "pull", fake_pull)
+    _fake_sftp(monkeypatch)
+
+    result = definitions.agira_daily_job.execute_in_process()
+
+    assert result.success
+    assert sorted(order[:2]) == ["publish:questions", "publish:terminations"]
+    assert order[2:] == ["push", "pull"]
+    assert result.output_for_node("archive_inbound_results")["discovered"] == 0
 
 
 def test_inbound_job_succeeds_when_depot_is_empty(
