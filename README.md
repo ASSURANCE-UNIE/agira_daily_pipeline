@@ -43,7 +43,7 @@ an invalid empty TXT file.
 1. The translator lives in `agira/` (part of this repository). The local
    dependency in `pyproject.toml` points there directly. `data/` is not
    versioned: copy it over manually; the pipeline recreates missing folders.
-2. Run `uv sync --extra database --extra orchestration --extra sftp`.
+2. Run `uv sync --extra database --extra orchestration --extra sftp --extra viewer`.
 3. Put the PostgreSQL URL in `prd.env` as `AGIRA_DB_CONNECTION_STRING=postgresql://...`
    (or export it as an environment variable; the variable wins). `prd.env` is
    gitignored.
@@ -88,7 +88,7 @@ same history path leaves the depot source in place and is reported as an error.
 
 ## DARVA SFTP transfer
 
-Install with `uv sync --extra database --extra orchestration --extra sftp`.
+Install with `uv sync --extra database --extra orchestration --extra sftp --extra viewer`.
 The server (`[sftp]` in `settings.toml`) only accepts the production server's
 IP. Uploads and downloads both live at the server root, and the server deletes
 each file once it has been transferred.
@@ -102,8 +102,11 @@ uv run agira-sftp sync   # pull, then push
 `push` only sends, and then deletes, a depot file when `data/history` holds an
 identical copy. `pull` writes to a hidden `.part` file before renaming it, and
 leaves a file on the server if the depot already has that name. It also skips
-any file we sent ourselves that the server has not consumed yet. The Dagster
-outbound job pushes after publishing; the inbound job pulls before archiving.
+any file we sent ourselves that the server has not consumed yet. The DARVA
+server deletes each file itself as soon as it is downloaded and refuses client
+deletes (`Permission denied`), so `pull` never removes anything remotely. The
+Dagster outbound job pushes after publishing; the inbound job pulls before
+archiving.
 
 One-time key setup: open `id_rsa_winscp.ppk` in PuTTYgen, then use
 **Conversions > Export OpenSSH key** and save it as `id_rsa_darva` in the
@@ -129,7 +132,7 @@ project root. Keep the passphrase. Put the passphrase in `prd.env` as
 
 Before production scheduling, confirm these points with AGIRA/data owners:
 
-1. whether “35 days” means calendar days or business days, and which date/time
+1. whether “35 days” means calendar days or business days, and which date/time
    field is authoritative;
 2. whether the question cutoff may use same-day data (`lag = 0`) and how late
    transactions are handled;
@@ -147,15 +150,16 @@ See `docs/OPERATIONS.md` for scheduling, monitoring, and recovery guidance.
 
 ## Dagster orchestration
 
-The Dagster code location defines two schedules. Both run every calendar day at
-11:00 in the `Europe/Paris` timezone and start enabled:
+The Dagster code location defines three jobs and one schedule:
 
-- `agira_outbound_1100` runs the question and termination feeds and publishes
-  their files into the local depots. The existing downstream FTP/CFT process is
-  still responsible for sending those files to AGIRA.
-- `agira_inbound_1100` scans both interrogation depots, writes the original and
-  clean JSON into dated history, and deletes each successfully archived depot
-  source.
+- `agira_daily_job` (all in one) generates the question and termination files,
+  sends them to DARVA, downloads every waiting DARVA file into
+  `data/depot/interrogations/{resp,rej}`, then archives each one (original
+  EDI/TXT plus clean JSON) into dated history and clears the depot.
+  The `agira_daily_1100` schedule runs it every calendar day at 11:00
+  `Europe/Paris` and starts enabled.
+- `agira_outbound_job` (generate + send) and `agira_inbound_job` (fetch +
+  archive) are the two halves, unscheduled, for manual reruns.
 
 For local development, create a persistent Dagster state directory and start
 the UI plus daemon from the repository root:
@@ -167,10 +171,22 @@ uv run dg dev
 ```
 
 The UI is available at `http://localhost:3000`. `dg dev` must remain running for
-the schedules to fire and is intended for development. For unattended
-production scheduling, run the Dagster webserver and daemon as supervised
-services with a persistent `DAGSTER_HOME`, the repository as working directory,
-and the same database/data-directory permissions described above.
+the schedules to fire and is intended for development.
+
+On the production server, `scripts/start_dagster.ps1` (or double-click
+`scripts/start_dagster.cmd`) starts the daemon, the webserver on
+`http://localhost:1507` and the response viewer on `http://localhost:1508`, with `DAGSTER_HOME=.dagster` and logs in
+`.dagster/logs`. To start it with Windows, run once from an elevated
+PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File C:\Scripts\agira_daily_pipeline\scripts\install_dagster_task.ps1
+```
+
+This registers the `AGIRA Dagster` scheduled task: it starts at boot, runs
+whether or not the user is logged on, and restarts within a minute if any
+process stops. Only one instance may run at a time, or the schedule fires twice:
+stop the task (`Stop-ScheduledTask "AGIRA Dagster"`) before using the `.cmd`.
 
 Set `AGIRA_SETTINGS_PATH` before starting Dagster only when the settings file is
 not `settings.toml` in the repository root.

@@ -2,15 +2,17 @@
 
 ## Recommended schedule
 
-The Dagster schedules run every calendar day at 11:00 in `Europe/Paris`. With
+The `agira_daily_1100` Dagster schedule runs `agira_daily_job` every calendar
+day at 11:00 in `Europe/Paris`. With
 the default question lag of one day, this morning run is safe. Use a scheduler
 service account with read-only database access and write access limited to this
 project's `data` and persistent Dagster state directories.
 
-`agira_outbound_1100` publishes question and termination files to the local
-depots; the downstream FTP/CFT service remains responsible for network transfer.
-`agira_inbound_1100` archives and translates received files, then removes only
-the depot inputs whose history artifacts were verified successfully.
+`agira_daily_job` publishes question and termination files to the local depots,
+sends them to DARVA over SFTP, downloads DARVA results into the interrogation
+depots, then archives and translates them, removing only the depot inputs whose
+history artifacts were verified successfully. `agira_outbound_job` and
+`agira_inbound_job` run each half on its own for manual recovery.
 
 The job returns exit code `0` on a published or explicitly empty feed and `2` on
 configuration, extraction, validation, or publication failure. Capture stdout,
@@ -33,6 +35,12 @@ audit trail.
 
 If questions succeed and terminations fail (or the reverse), rerun only the
 failed feed. The independent daily folders are intentional.
+
+If `receive_results` fails after downloading, the file is already in
+`data/depot/interrogations/{resp,rej}` and DARVA has already deleted its copy;
+do not expect to download it again. Re-execute `archive_inbound_results` alone,
+or launch `agira_inbound_job`. The archive step scans the depot itself and only
+waits for the pull to finish, so it needs no stored output from an earlier run.
 
 ## Monitoring checklist
 
