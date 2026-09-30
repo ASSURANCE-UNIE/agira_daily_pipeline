@@ -124,11 +124,10 @@ def receive_results(context: OpExecutionContext) -> list[str]:
     return received
 
 
-@dg.op
-def archive_inbound_results(
-    context: OpExecutionContext,
-    received: list[str],
-) -> dict[str, int]:
+# "after_receive" only orders the archive behind the pull; the op scans the
+# depot itself, so re-running it alone needs no stored upstream output.
+@dg.op(ins={"after_receive": dg.In(dg.Nothing)})
+def archive_inbound_results(context: OpExecutionContext) -> dict[str, int]:
     config = _load_config()
     sources = discover_inbound_files(config.depot)
     counts: Counter[str] = Counter()
@@ -181,7 +180,7 @@ def agira_outbound_job() -> None:
 
 @dg.job(description="Fetch AGIRA results from DARVA, then translate and archive them.")
 def agira_inbound_job() -> None:
-    archive_inbound_results(receive_results())
+    archive_inbound_results(after_receive=receive_results())
 
 
 @dg.job(
@@ -193,7 +192,7 @@ def agira_inbound_job() -> None:
 def agira_daily_job() -> None:
     run_date = processing_date()
     sent = send_depot_files(publish_questions(run_date), publish_terminations(run_date))
-    archive_inbound_results(receive_results(after_send=sent))
+    archive_inbound_results(after_receive=receive_results(after_send=sent))
 
 
 SCHEDULE_TIMEZONE = _load_config().timezone
