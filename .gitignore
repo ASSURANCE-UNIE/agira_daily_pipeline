@@ -15,3 +15,4 @@ prd.env
 id_rsa_darva
 /.python/
 /.venv.old/
+/.vscode/
